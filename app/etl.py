@@ -11,7 +11,6 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import APP_ID, APP_KEY
-from app.database import engine
 from app.dependencies import get_db
 from app.models import Job
 
@@ -46,7 +45,7 @@ def get_http_session() -> requests.Session:
     
     # Set standard user-agent header
     session.headers.update({
-        "User-Agent": "JobMarketPulse-ETL/1.0 (Data Engineering Project)"
+        "User-Agent": "RoleLens-ETL/1.0 (Data Engineering Project)"
     })
     
     return session
@@ -96,8 +95,6 @@ def fetch_jobs(
 
             all_results.extend(results)
             logger.info(f"Successfully retrieved {len(results)} jobs from page {page}.")
-            
-            # Gentle API rate-limiting delay between requests
             time.sleep(0.5)
 
         except requests.exceptions.RequestException as e:

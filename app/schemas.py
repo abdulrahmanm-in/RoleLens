@@ -14,7 +14,6 @@ class JobResponse(BaseModel):
     redirect_url: Optional[str] = None
     created_at: datetime.datetime
 
-    # Enables automatic conversion from SQLAlchemy ORM models to Pydantic objects
     model_config = ConfigDict(from_attributes=True)
 
 

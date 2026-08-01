@@ -2,13 +2,13 @@ services:
   api:
     build:
       target: development
-    container_name: job_market_api_dev
+    container_name: rolelens_api_dev
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://job_user:job_password@db:5432/jobpulse_dev
+      - DATABASE_URL=postgresql://lensuser:lenspassword@db:5432/rolelens_dev
     volumes:
       - .:/app
     command: >
@@ -21,18 +21,18 @@ services:
         condition: service_healthy
   db:
     image: postgres:17-alpine
-    container_name: job_market_postgres_dev
+    container_name: rolelens_postgres_dev
     restart: always
     environment:
-      POSTGRES_USER: job_user
-      POSTGRES_PASSWORD: job_password
-      POSTGRES_DB: jobpulse_dev
+      POSTGRES_USER: lensuser
+      POSTGRES_PASSWORD: lenspassword
+      POSTGRES_DB: rolelens_dev
     ports:
       - "5432:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U job_user -d jobpulse_dev"]
+      test: ["CMD-SHELL", "pg_isready -U lensuser -d rolelens_dev"]
       interval: 5s
       timeout: 5s
       retries: 5
