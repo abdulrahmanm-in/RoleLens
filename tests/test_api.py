@@ -1,4 +1,3 @@
-# tests/test_api.py
 def test_home_endpoint(client):
     """Verify root endpoint responds with OpenAPI welcome message."""
     response = client.get("/")

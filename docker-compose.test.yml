@@ -3,11 +3,11 @@ services:
     build:
       target: testing
 
-    container_name: job_market_api_test
+    container_name: rolelens_api_test
 
     environment:
-      - DATABASE_URL=postgresql://job_user:job_password@postgres:5432/jobpulse_test
-      - TEST_DATABASE_URL=postgresql://job_user:job_password@postgres:5432/jobpulse_test
+      - DATABASE_URL=postgresql://lensuser:lenspassword@postgres:5432/rolelens_test
+      - TEST_DATABASE_URL=postgresql://lensuser:lenspassword@postgres:5432/rolelens_test
       - ADZUNA_APP_ID=${ADZUNA_APP_ID}
       - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
 
@@ -19,15 +19,15 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    container_name: job_market_postgres_test
+    container_name: rolelens_postgres_test
 
     environment:
-      POSTGRES_USER: job_user
-      POSTGRES_PASSWORD: job_password
-      POSTGRES_DB: jobpulse_test
+      POSTGRES_USER: lensuser
+      POSTGRES_PASSWORD: lenspassword
+      POSTGRES_DB: rolelens_test
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U job_user -d jobpulse_test"]
+      test: ["CMD-SHELL", "pg_isready -U lensuser -d rolelens_test"]
       interval: 5s
       timeout: 5s
       retries: 10
