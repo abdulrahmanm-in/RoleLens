@@ -1,13 +1,32 @@
-.venv/
-venv/
+# Git
+.git
+.github
+
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.env
-.git/
-.gitignore
+*.py[cod]
 .pytest_cache/
+.mypy_cache/
 .coverage
 htmlcov/
+.pytest/
+
+# Virtual Environments
+venv/
+.venv/
+.vfastapi
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment Files
+.env
+.env.test
+
+# Documentation
 README.md
+
+# OS Files
+.DS_Store
+Thumbs.db

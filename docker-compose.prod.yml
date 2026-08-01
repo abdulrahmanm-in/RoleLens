@@ -2,7 +2,7 @@ services:
   api:
     build:
       target: production
-      container_name: job_market_api_prod
+      container_name: rolelens_api_prod
 
 
     ports:

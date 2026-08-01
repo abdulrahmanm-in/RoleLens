@@ -29,8 +29,8 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(
-    title="Job Market Pulse API",
-    description="Live job market insights and ETL analytics for Chennai, India.",
+    title="RoleLens API",
+    description="Automated job market analytics and skill extraction pipeline",
     version="1.0.0",
     lifespan=lifespan
 )

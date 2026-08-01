@@ -1,4 +1,4 @@
-name: Job Market Pulse Docker CI
+name: RoleLens Docker CI
 
 on:
   push:
@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: postgresql://job_user:job_password@postgres:5432/jobpulse_test
-      TEST_DATABASE_URL: postgresql://job_user:job_password@postgres:5432/jobpulse_test
+      DATABASE_URL: postgresql://lensuser:lenspassword@postgres:5432/rolelens_test
+      TEST_DATABASE_URL: postgresql://lensuser:lenspassword@postgres:5432/rolelens_test
 
       ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
       ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}

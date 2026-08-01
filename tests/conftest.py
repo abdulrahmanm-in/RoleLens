@@ -8,11 +8,10 @@ from app.main import app
 from app.database import Base
 from app.dependencies import get_db
 
-# Connects to Postgres container in Docker or local Postgres fallback
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    os.getenv("DATABASE_URL", "postgresql://job_user:job_password@localhost:5432/jobpulse_test")
-)
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+
+if not TEST_DATABASE_URL:
+    raise ValueError("DATABASE_URL or TEST_DATABASE_URL environment variable must be set!")
 
 engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
