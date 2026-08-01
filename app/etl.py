@@ -1,0 +1,261 @@
+import datetime
+import logging
+import time
+from typing import List, Dict, Any, Optional
+
+import requests
+import pandas as pd
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.config import APP_ID, APP_KEY
+from app.database import engine
+from app.dependencies import get_db
+from app.models import Job
+
+# -------------------------------------------------------------------
+# Structured Logging Setup
+# -------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("ETL_Pipeline")
+
+# -------------------------------------------------------------------
+# HTTP Session with Retry / Backoff Strategy
+# -------------------------------------------------------------------
+def get_http_session() -> requests.Session:
+    """Configures a requests session with exponential backoff and retries."""
+    session = requests.Session()
+    
+    # Retry on standard HTTP server error codes
+    retries = Retry(
+        total=3,
+        backoff_factor=1,  # Waits 1s, 2s, 4s between attempts
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"]
+    )
+    
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    
+    # Set standard user-agent header
+    session.headers.update({
+        "User-Agent": "JobMarketPulse-ETL/1.0 (Data Engineering Project)"
+    })
+    
+    return session
+
+# -------------------------------------------------------------------
+# 1. EXTRACT
+# -------------------------------------------------------------------
+def fetch_jobs(
+    role: str = "data engineer",
+    country: str = "in",
+    city: str = "chennai",
+    max_pages: int = 2
+) -> List[Dict[str, Any]]:
+    """
+    Extracts raw job postings from the Adzuna API with multi-page pagination.
+    """
+    session = get_http_session()
+    all_results: List[Dict[str, Any]] = []
+
+    if not APP_ID or not APP_KEY:
+        logger.error("ADZUNA_APP_ID or ADZUNA_APP_KEY environment variables are missing!")
+        return []
+
+    logger.info(f"Starting extraction for role='{role}' in location='{city}, {country.upper()}' (Max Pages: {max_pages})")
+
+    for page in range(1, max_pages + 1):
+        url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
+        params = {
+            "app_id": APP_ID,
+            "app_key": APP_KEY,
+            "results_per_page": 50,
+            "what": role,
+            "where": city
+        }
+
+        try:
+            logger.info(f"Fetching page {page}/{max_pages}...")
+            response = session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            results = data.get('results', [])
+            
+            if not results:
+                logger.info(f"No more results found on page {page}. Ending pagination.")
+                break
+
+            all_results.extend(results)
+            logger.info(f"Successfully retrieved {len(results)} jobs from page {page}.")
+            
+            # Gentle API rate-limiting delay between requests
+            time.sleep(0.5)
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch data on page {page}: {str(e)}")
+            break
+
+    logger.info(f"Total raw jobs extracted: {len(all_results)}")
+    return all_results
+
+# -------------------------------------------------------------------
+# 2. TRANSFORM
+# -------------------------------------------------------------------
+def transform_data(raw_data: List[Dict[str, Any]]) -> pd.DataFrame:
+    """
+    Cleans, normalizes, extracts tech stacks, and deduplicates raw job payloads.
+    """
+    if not raw_data:
+        logger.warning("Transform stage received an empty raw dataset.")
+        return pd.DataFrame()
+
+    df = pd.json_normalize(raw_data)
+
+    # 1. Select target columns
+    cols_to_keep = [
+        'id', 'title', 'company.display_name', 'location.display_name',
+        'description', 'salary_min', 'salary_max', 'redirect_url'
+    ]
+    df = df[[c for c in cols_to_keep if c in df.columns]]
+
+    # 2. Rename columns to match Job ORM Model
+    df = df.rename(columns={
+        'company.display_name': 'company',
+        'location.display_name': 'location'
+    })
+
+    # 3. Clean numeric salary fields
+    if 'salary_min' in df.columns:
+        df['salary_min'] = pd.to_numeric(df['salary_min'], errors='coerce').fillna(0.0)
+    else:
+        df['salary_min'] = 0.0
+
+    if 'salary_max' in df.columns:
+        df['salary_max'] = pd.to_numeric(df['salary_max'], errors='coerce').fillna(0.0)
+    else:
+        df['salary_max'] = 0.0
+
+    # 4. Extract tech keywords from job description
+    target_keywords = [
+        'python', 'sql', 'aws', 'docker', 'fastapi', 'pandas',
+        'spark', 'airflow', 'kafka', 'postgres', 'azure', 'gcp', 'dbt'
+    ]
+    
+    def parse_tech_stack(text_content: Any) -> str:
+        text_str = str(text_content).lower() if pd.notnull(text_content) else ""
+        matched = [kw for kw in target_keywords if kw in text_str]
+        return ",".join(matched)
+
+    if 'description' in df.columns:
+        df['tech_stack'] = df['description'].apply(parse_tech_stack)
+    else:
+        df['tech_stack'] = ""
+
+    # 5. Clean string fields
+    for col in ['title', 'company', 'location', 'description', 'redirect_url']:
+        if col in df.columns:
+            df[col] = df[col].astype(str).fillna("N/A")
+
+    # 6. Deduplicate by unique Adzuna job ID
+    df['id'] = df['id'].astype(str)
+    initial_count = len(df)
+    df = df.drop_duplicates(subset=['id'])
+    logger.info(f"Transformation complete. Cleaned {len(df)} jobs (Dropped {initial_count - len(df)} duplicates).")
+
+    return df
+
+# -------------------------------------------------------------------
+# 3. LOAD (7-Day Rolling Window Retention)
+# -------------------------------------------------------------------
+def load_data(df: pd.DataFrame, db_session: Optional[Session] = None) -> int:
+    """
+    Loads transformed DataFrame into PostgreSQL while purging listings older than 7 days.
+    """
+    if df.empty:
+        logger.info("Load skipped: Transformed DataFrame is empty.")
+        return 0
+
+    # Manage session lifecycle safely if not passed in
+    is_internal_session = False
+    if db_session is None:
+        db_session = next(get_db())
+        is_internal_session = True
+
+    loaded_count = 0
+
+    try:
+        # Step 1: Cleanup - Enforce 7-day rolling window storage strategy
+        logger.info("Executing 7-day rolling window cleanup...")
+        db_session.execute(text("DELETE FROM jobs WHERE created_at < NOW() - INTERVAL '7 days'"))
+        db_session.commit()
+
+        # Step 2: Query existing DB job IDs to prevent duplicate inserts
+        existing_ids_result = db_session.execute(text("SELECT id FROM jobs")).fetchall()
+        existing_ids = {row[0] for row in existing_ids_result}
+
+        # Step 3: Filter out existing records
+        new_jobs_df = df[~df['id'].isin(existing_ids)]
+
+        if new_jobs_df.empty:
+            logger.info("Check complete: All extracted jobs already exist in DB. 0 rows inserted.")
+            return 0
+
+        # Step 4: Bulk construct ORM models and insert
+        jobs_to_insert = []
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
+
+        for _, row in new_jobs_df.iterrows():
+            job_obj = Job(
+                id=str(row['id']),
+                title=str(row['title']),
+                company=str(row['company']),
+                location=str(row['location']),
+                description=str(row['description']),
+                salary_min=float(row['salary_min']),
+                salary_max=float(row['salary_max']),
+                tech_stack=str(row['tech_stack']),
+                redirect_url=str(row.get('redirect_url', '')),
+                created_at=utc_now
+            )
+            jobs_to_insert.append(job_obj)
+
+        db_session.bulk_save_objects(jobs_to_insert)
+        db_session.commit()
+        loaded_count = len(jobs_to_insert)
+        logger.info(f"✅ Successful Load: Inserted {loaded_count} new job records into DB.")
+
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"❌ ETL Load failed: {str(e)}", exc_info=True)
+        raise e
+    finally:
+        if is_internal_session:
+            db_session.close()
+
+    return loaded_count
+
+# -------------------------------------------------------------------
+# Pipeline Orchestrator
+# -------------------------------------------------------------------
+def run_pipeline() -> pd.DataFrame:
+    """Executes the full Extract-Transform-Load (ETL) pipeline lifecycle."""
+    logger.info("🚀 Initiating scheduled Job Market Pulse ETL Pipeline run...")
+    
+    raw_jobs = fetch_jobs(role="data engineer", country="in", city="chennai", max_pages=2)
+    clean_df = transform_data(raw_jobs)
+    load_data(clean_df)
+    
+    logger.info("🏁 ETL Pipeline execution completed successfully.")
+    return clean_df
+
+if __name__ == "__main__":
+    run_pipeline()

@@ -1,0 +1,10 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: job_market_api
+
+    ports:
+      - "8000:8000"
