@@ -1,10 +1,10 @@
 import datetime
 from typing import List, Optional, Union
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class JobResponse(BaseModel):
-    id: str
+    id: str = Field(..., alias="_id")
     title: str
     company: Optional[str] = "N/A"
     location: Optional[str] = "N/A"
@@ -14,7 +14,10 @@ class JobResponse(BaseModel):
     redirect_url: Optional[str] = None
     created_at: datetime.datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True
+    )
 
 
 class TechTrendItem(BaseModel):

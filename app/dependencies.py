@@ -1,13 +1,9 @@
 from typing import Annotated
 from fastapi import Depends
-from sqlalchemy.orm import Session
-from app.database import SessionLocal
+from pymongo.collection import Collection
+from app.database import jobs_collection
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    return jobs_collection
 
-db_dependency = Annotated[Session, Depends(get_db)]
+db_dependency = Annotated[Collection, Depends(get_db)]

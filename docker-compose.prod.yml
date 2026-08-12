@@ -2,14 +2,8 @@ services:
   api:
     build:
       target: production
-      container_name: rolelens_api_prod
-
-
-    ports:
-      - "8000:8000"
-
+    container_name: rolelens_api_prod
     restart: unless-stopped
-
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
