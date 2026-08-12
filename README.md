@@ -78,18 +78,25 @@ This repository demonstrates full-stack backend engineering skills including ETL
 
 ```mermaid
 flowchart LR
-  ADZ[Adzuna Jobs API] --> ETL[ETL Pipeline (`app/etl.py`)]
-  SCHED[APScheduler Daily Trigger] --> ETL
-  MANUAL[Manual sync endpoint (`/run-manual-sync`)] --> ETL
-  ETL --> MONGO[MongoDB Jobs Collection]
-  MONGO --> API[FastAPI REST API (`app/main.py`)]
-  CLIENT[Clients / Swagger UI / External Apps] --> API
+  ADZ["Adzuna Jobs API"] --> ETL["ETL Pipeline<br/>(app/etl.py)"]
+  SCHED["APScheduler<br/>Daily Trigger"] --> ETL
+  MANUAL["Manual sync<br/>(/run-manual-sync)"] --> ETL
+  ETL --> MONGO["MongoDB<br/>Jobs Collection"]
+  MONGO --> API["FastAPI REST API<br/>(app/main.py)"]
+  CLIENT["Clients / Swagger UI"] --> API
+  
+  style ADZ fill:#e1f5ff
+  style ETL fill:#fff3e0
+  style MONGO fill:#f3e5f5
+  style API fill:#e8f5e9
+  style CLIENT fill:#fce4ec
 ```
 
-- `app/etl.py` performs extract, transform, and load.
-- `app/main.py` exposes the API and manages scheduler lifecycle.
-- `app/database.py` configures MongoDB connection.
-- `tests/` validates pipeline and API behavior.
+- `app/etl.py` — performs extract, transform, and load operations
+- `app/main.py` — exposes REST API and manages scheduler lifecycle
+- `app/database.py` — configures MongoDB connection
+- `tests/` — validates pipeline and API behavior
+
 
 ---
 
