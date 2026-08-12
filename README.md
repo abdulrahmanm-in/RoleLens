@@ -1,6 +1,6 @@
-# 🎯 RoleLens
+﻿# 🎯 RoleLens
 
-> **Production-ready Job Market Analytics Platform built with FastAPI, PostgreSQL, Pandas, Docker, and APScheduler.**
+> **A containerized job market ETL and analytics platform built with FastAPI, MongoDB, Pandas, and Docker.**
 
 <p align="center">
 
@@ -8,164 +8,102 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Framework-009688?logo=fastapi)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker)
 ![Pandas](https://img.shields.io/badge/Pandas-Data%20Engineering-150458?logo=pandas)
-![Pytest](https://img.shields.io/badge/Pytest-Passing-success?logo=pytest)
-![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI-blue?logo=githubactions)
+![Pytest](https://img.shields.io/badge/Pytest-Tests-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 </p>
 
 ---
 
+## 🌐 Demo
+
+| Service | Link |
+|---------|------|
+| API Docs | `https://external-lusa-rahmandev-d415ed9a.koyeb.app/docs` |
+| ReDoc | `https://external-lusa-rahmandev-d415ed9a.koyeb.app/redoc` |
+
+---
+
 ## 📌 Overview
 
-RoleLens is a **containerized ETL and analytics platform** that continuously collects job listings from external APIs, transforms raw data into structured insights, stores the processed information in PostgreSQL, and exposes analytics through a RESTful API.
+RoleLens ingests technology job listings from Adzuna, transforms raw job data into analytics-ready records, stores them in MongoDB, and exposes job market insights through a FastAPI REST API.
 
-The project demonstrates real-world backend engineering practices including:
-
-- Automated ETL pipelines
-- REST API development
-- Data cleaning & transformation
-- Background job scheduling
-- Analytics generation
-- SQL database design
-- Docker containerization
-- Integration testing
-- CI/CD automation
+This repository demonstrates full-stack backend engineering skills including ETL design, data modeling, scheduler integration, API development, Dockerization, and automated testing.
 
 ---
 
-# ✨ Key Features
+## 🚀 Features
 
-## 📥 Automated Data Ingestion
-
-- Scheduled ETL pipeline using APScheduler
-- Fetches latest job listings from external APIs
-- Manual pipeline execution endpoint
-- Incremental data synchronization
-
----
-
-## 🧹 Data Processing Pipeline
-
-Incoming job listings are automatically processed to:
-
-- Remove duplicate jobs
-- Normalize salary ranges
-- Clean HTML from descriptions
-- Standardize locations
-- Extract technology keywords
-- Prepare analytics-ready datasets
+- Automated Adzuna job ingestion for `Chennai` and `Bangalore`
+- Daily ETL scheduling with APScheduler
+- Manual ETL trigger endpoint
+- Job deduplication by external ID
+- Tech skill extraction from job descriptions
+- Salary normalization and analytics aggregation
+- MongoDB bulk upsert with 7-day rolling retention
+- FastAPI REST API with OpenAPI docs
+- Isolated tests using `mongomock`
+- Dockerized local development environment
 
 ---
 
-## 📊 Job Market Analytics
+## 🛠️ Tech Stack
 
-RoleLens provides insights including:
-
-- Technology demand trends
-- Average salary insights
-- Recently posted jobs
-- Skill frequency analysis
-- Job market statistics
-
----
-
-## ⚡ REST API
-
-Built with FastAPI and automatically documented using OpenAPI.
-
-Available endpoints include:
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /` | API Home |
-| `GET /health` | System health & database connectivity |
-| `GET /jobs/latest` | Fetch latest job postings |
-| `GET /trends` | Technology demand analytics |
-| `GET /salaries` | Salary insights by role |
-| `GET /run-manual-sync` | Trigger ETL pipeline manually |
-
----
-
-# 🏗 System Architecture
-
-```text
-                 External Job APIs
-                        │
-                        ▼
-              Automated ETL Scheduler
-                 (APScheduler)
-                        │
-                        ▼
-             Data Processing Pipeline
-        ┌─────────────────────────────┐
-        │ Pandas                      │
-        │ • Clean Data                │
-        │ • Normalize Salaries        │
-        │ • Remove Duplicates         │
-        │ • Extract Tech Skills       │
-        └─────────────────────────────┘
-                        │
-                        ▼
-              PostgreSQL Database
-                        │
-                        ▼
-                 FastAPI REST API
-                        │
-        ┌───────────────┴───────────────┐
-        ▼                               ▼
-   Swagger UI                    External Clients
-```
-
----
-
-# 🛠 Tech Stack
-
-## Backend
-
+### Backend
 - Python 3.11
 - FastAPI
-- SQLAlchemy
+- Pandas
+- Requests
 - APScheduler
 
-### Data Engineering
-
-- Pandas
-- NumPy
-- Regex Processing
-
 ### Database
-
-- PostgreSQL 17
-
-### DevOps
-
-- Docker
-- Docker Compose
-- GitHub Actions
+- MongoDB 7
+- PyMongo
 
 ### Testing
-
 - Pytest
 - FastAPI TestClient
-- PostgreSQL Integration Tests
+- mongomock
+
+### DevOps
+- Docker
+- Docker Compose
 
 ---
 
-# 📂 Project Structure
+## 🏗 Architecture
+
+```mermaid
+flowchart LR
+  ADZ[Adzuna Jobs API] --> ETL[ETL Pipeline (`app/etl.py`)]
+  SCHED[APScheduler Daily Trigger] --> ETL
+  MANUAL[Manual sync endpoint (`/run-manual-sync`)] --> ETL
+  ETL --> MONGO[MongoDB Jobs Collection]
+  MONGO --> API[FastAPI REST API (`app/main.py`)]
+  CLIENT[Clients / Swagger UI / External Apps] --> API
+```
+
+- `app/etl.py` performs extract, transform, and load.
+- `app/main.py` exposes the API and manages scheduler lifecycle.
+- `app/database.py` configures MongoDB connection.
+- `tests/` validates pipeline and API behavior.
+
+---
+
+## 📂 Project Structure
 
 ```text
-rolelens/
+RoleLens/
 
 ├── app/
+│   ├── config.py
 │   ├── database.py
 │   ├── dependencies.py
 │   ├── etl.py
 │   ├── main.py
-│   ├── models.py
 │   └── schemas.py
 │
 ├── tests/
@@ -173,54 +111,83 @@ rolelens/
 │   ├── test_api.py
 │   └── test_etl.py
 │
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-│
 ├── docker-compose.yml
 ├── docker-compose.override.yml
+├── docker-compose.prod.yml
 ├── docker-compose.test.yml
 ├── Dockerfile
+├── README.md
 ├── requirements.txt
 ├── pytest.ini
-└── README.md
+└── LICENSE
 ```
 
 ---
 
-# 🚀 Quick Start
+## 🔧 Installation
 
-Clone the repository
+### Prerequisites
+
+- Python 3.11
+- Docker Desktop (recommended)
+- MongoDB or Dockerized MongoDB instance
+
+### Clone the repository
 
 ```bash
 git clone https://github.com/abdulrahmanm-in/rolelens.git
-
-cd rolelens
+cd RoleLens
 ```
 
-Create environment variables
+### Create environment variables
 
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
-Example:
+Update `.env` with your values:
 
 ```env
 ADZUNA_APP_ID=your_app_id
 ADZUNA_APP_KEY=your_app_key
-
-DATABASE_URL=postgresql://job_user:job_password@postgres:5432/rolelens_dev_db
-TEST_DATABASE_URL=postgresql://job_user:job_password@postgres:5432/rolelens_test_db
+DATABASE_URL=mongodb://job_user:job_password@mongo:27017/rolelens_dev_db
 ```
 
-Build and start the application
+---
+
+## 🌐 Environment Variables
+
+| Key | Description |
+| --- | ----------- |
+| `ADZUNA_APP_ID` | Adzuna API application ID |
+| `ADZUNA_APP_KEY` | Adzuna API key |
+| `DATABASE_URL` | MongoDB connection URI |
+
+---
+
+## ▶️ Run the Application
+
+### Docker
 
 ```bash
 docker compose up --build
 ```
 
-Stop the application
+### Local Python
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Open the API docs:
+
+- Swagger: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+Stop the app:
 
 ```bash
 docker compose down
@@ -228,192 +195,136 @@ docker compose down
 
 ---
 
-# 📖 API Documentation
+## 📡 API Endpoints
 
-Once running:
+### General
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Welcome message |
+| GET | `/health` | Health and MongoDB status |
 
-| Documentation | URL |
-|--------------|-----|
-| Swagger UI | http://localhost:8000/docs |
-| ReDoc | http://localhost:8000/redoc |
+### Job Analytics
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/jobs/latest` | Latest ingested job postings |
+| GET | `/trends` | Technology demand trends |
+| GET | `/salaries` | Salary insights for a role |
+| GET | `/run-manual-sync` | Trigger ETL pipeline manually |
 
----
-
-# 📡 API Endpoints
-
-## Health Monitoring
-
-```http
-GET /health
-```
-
-Returns API health, database connectivity, and timestamp.
-
-Example
-
-```json
-{
-  "status": "healthy",
-  "database": "connected",
-  "timestamp": "2026-08-01T15:00:00Z"
-}
-```
+### Query Parameters
+- `role` — filter jobs by role or keyword
+- `city` — filter jobs by city name
+- `limit` — maximum number of jobs to return (1-100)
 
 ---
 
-## Latest Jobs
+## 🧠 ETL Pipeline Details
 
-```http
-GET /jobs/latest?limit=10
-```
-
-Returns the latest ingested job postings.
-
-Example
-
-```json
-[
-  {
-    "title": "Backend Developer",
-    "company": "ABC Technologies",
-    "location": "Chennai",
-    "salary_min": 1200000,
-    "salary_max": 1800000,
-    "tech_stack": "Python, Docker, PostgreSQL"
-  }
-]
-```
+1. Extracts IT jobs from Adzuna for `Chennai` and `Bangalore`.
+2. Normalizes salary values and cleans job metadata.
+3. Extracts technology keywords from job descriptions.
+4. Deduplicates records using Adzuna job IDs.
+5. Bulk upserts cleaned documents into MongoDB.
+6. Removes job records older than 7 days.
 
 ---
 
-## Technology Trends
+## 🧪 Testing
 
-```http
-GET /trends
-```
-
-Returns aggregated technology demand metrics.
-
----
-
-## Salary Insights
-
-```http
-GET /salaries?role=data engineer
-```
-
-Returns average minimum and maximum salaries for a specified role.
-
----
-
-## Manual ETL Execution
-
-```http
-GET /run-manual-sync
-```
-
-Triggers immediate execution of the ingestion pipeline.
-
----
-
-# 🧪 Testing
-
-Run the complete test suite inside Docker.
+Run tests locally:
 
 ```bash
-docker compose \
--f docker-compose.yml \
--f docker-compose.test.yml \
-run --rm api
+pytest
 ```
 
-Cleanup
+Run tests in Docker:
 
 ```bash
-docker compose \
--f docker-compose.yml \
--f docker-compose.test.yml \
-down -v
+docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm api
 ```
 
-Testing includes:
+### What tests cover
+- API endpoint behavior
+- health check and response validation
+- ETL transformation logic
+- keyword extraction from descriptions
+- duplicate job deduplication
+- empty dataset handling
 
+---
+
+## 🔄 Continuous Integration
+
+This repository is designed for CI validation with Docker and Pytest. The CI pipeline should verify:
+
+- Docker image build
+- ETL pipeline execution
 - API endpoint validation
-- ETL pipeline testing
-- Database integration
-- SQLAlchemy ORM testing
-- Analytics validation
+- Automated tests run successfully
 
 ---
 
-# 🔄 Continuous Integration
+## 🚀 Deployment
 
-Every push and pull request automatically performs:
+The application can be deployed using Docker Compose for production.
 
-```text
-Push / Pull Request
-        │
-        ▼
-Flake8 Linting
-        │
-        ▼
-Docker Build
-        │
-        ▼
-Pytest Execution
-        │
-        ▼
-Production Image Verification
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 ---
 
-# 💡 Skills Demonstrated
+## 🔐 Security & Reliability
 
-This project showcases practical experience with:
-
-- Python Backend Development
-- REST API Design
-- FastAPI
-- SQLAlchemy ORM
-- PostgreSQL
-- Data Engineering
-- ETL Pipelines
-- Data Analytics
-- Pandas
-- Docker
-- Docker Compose
-- Background Scheduling
-- Automated Testing
-- GitHub Actions
-- CI/CD
-- Clean Architecture
-- Containerized Development
+- secure connection to MongoDB
+- safe ETL execution with retries and error handling
+- bulk upsert to prevent duplicate ingestion
+- isolated test environment using `mongomock`
+- clear environment variable configuration
 
 ---
 
-# 🚀 Future Enhancements
+## 🧭 Roadmap
 
-- Authentication & Authorization
-- Redis Caching
-- Historical Trend Dashboard
-- Grafana Monitoring
-- Elasticsearch Search
-- Kubernetes Deployment
-- AWS Cloud Deployment
-- Machine Learning Based Salary Prediction
+### Planned Enhancements
+- [ ] Add Adzuna pagination and incremental sync improvements
+- [ ] Add data caching for faster analytics
+- [ ] Add more advanced trend analysis endpoints
+- [ ] Improve salary parsing and normalization
+- [ ] Add historical analytics dashboards
 
 ---
 
-# 📄 License
+## 🤝 Contributing
 
-Distributed under the MIT License.
+Contributions are welcome! Please follow standard GitHub PR workflow:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit changes with clear messages
+4. Open a PR for review
 
 ---
 
-# 👨‍💻 Author
+## 📄 License
+
+MIT License
+
+---
+
+## 👨‍💻 Author
 
 **Abdul Rahman M**
 
 - GitHub: https://github.com/abdulrahmanm-in
 - LinkedIn: https://www.linkedin.com/in/abdul-rahman-m-660158206
+
+---
+
+## 📞 Support
+
+For issues, questions, or suggestions:
+- Open GitHub Issue: https://github.com/abdulrahmanm-in/RoleLens/issues
+- Email: indmabdulrahman@gmail.com
+
+**Happy coding! 🚀**
