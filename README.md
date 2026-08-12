@@ -85,11 +85,13 @@ flowchart LR
   MONGO --> API["FastAPI REST API<br/>(app/main.py)"]
   CLIENT["Clients / Swagger UI"] --> API
   
-  style ADZ fill:#e1f5ff
-  style ETL fill:#fff3e0
-  style MONGO fill:#f3e5f5
-  style API fill:#e8f5e9
-  style CLIENT fill:#fce4ec
+  style ADZ fill:#0288d1,color:#fff,stroke:#01579b,stroke-width:2px
+  style ETL fill:#f57c00,color:#fff,stroke:#e65100,stroke-width:2px
+  style MONGO fill:#c2185b,color:#fff,stroke:#880e4f,stroke-width:2px
+  style API fill:#388e3c,color:#fff,stroke:#1b5e20,stroke-width:2px
+  style CLIENT fill:#5e35b1,color:#fff,stroke:#311b92,stroke-width:2px
+  style SCHED fill:#00838f,color:#fff,stroke:#004d40,stroke-width:2px
+  style MANUAL fill:#d32f2f,color:#fff,stroke:#b71c1c,stroke-width:2px
 ```
 
 - `app/etl.py` — performs extract, transform, and load operations
