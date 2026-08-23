@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, status
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -14,19 +15,34 @@ from app.schemas import (
     SalaryInsightResponse
 )
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("rolelens")
+
 # ---------------------------------------------------------
 # Scheduler & Lifespan
 # ---------------------------------------------------------
-scheduler = BackgroundScheduler()
-scheduler.add_job(run_pipeline, 'interval', hours=24)
+scheduler = BackgroundScheduler(timezone="UTC")
+scheduler.add_job(
+    run_pipeline,
+    'interval',
+    hours=24,
+    id='daily_rolelens_sync',
+    replace_existing=True,
+    misfire_grace_time=3600,
+    coalesce=True,
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("⏰ Scheduler starting...")
-    scheduler.start()
-    yield
-    print("⏰ Scheduler shutting down...")
-    scheduler.shutdown()
+    logger.info("⏰ Scheduler starting...")
+    if not scheduler.running:
+        scheduler.start()
+    logger.info("Scheduled jobs: %s", [job.id for job in scheduler.get_jobs()])
+    try:
+        yield
+    finally:
+        logger.info("⏰ Scheduler shutting down...")
+        scheduler.shutdown(wait=False)
 
 app = FastAPI(
     title="RoleLens API",
