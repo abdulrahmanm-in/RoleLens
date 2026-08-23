@@ -37,3 +37,16 @@ def test_get_salary_insights_empty(client):
     data = response.json()
     assert data["avg_min_salary"] == "N/A"
     assert data["avg_max_salary"] == "N/A"
+
+
+def test_dashboard_analytics_empty(client):
+    """Verify the dashboard endpoint responds with empty chart datasets when no jobs exist."""
+    response = client.get("/analytics/dashboard")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["city"] == "all"
+    assert data["summary"]["total_jobs"] == 0
+    assert data["charts"]["tech_trends"]["labels"] == []
+    assert data["charts"]["job_volume"]["labels"] == []
+    assert data["charts"]["role_distribution"]["labels"] == []

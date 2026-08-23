@@ -171,6 +171,14 @@ def transform_data(raw_data: List[Dict[str, Any]]) -> pd.DataFrame:
     df = df.drop_duplicates(subset=['id'])
     logger.info(f"Transformation complete. Cleaned {len(df)} jobs (Dropped {initial_count - len(df)} duplicates).")
 
+    # 7. Attach a timezone-aware created_at timestamp for each record
+    try:
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
+        df['created_at'] = utc_now
+    except Exception:
+        # fallback to naive UTC if timezone-aware fails for some reason
+        df['created_at'] = datetime.datetime.utcnow()
+
     return df
 
 # -------------------------------------------------------------------
@@ -198,14 +206,28 @@ def load_data(df: pd.DataFrame, target_collection: Optional[Collection] = None) 
 
         for record in records:
             job_id = str(record.pop("id"))
-            # Build the document that will be $set (exclude immutable _id and timestamps)
-            doc_to_set = {k: v for k, v in record.items() if k not in ("_id", "created_at")}
+            # Extract created_at if present and coerce to datetime object
+            created_on_insert = record.pop("created_at", None)
+            if isinstance(created_on_insert, str):
+                try:
+                    parsed = datetime.datetime.fromisoformat(created_on_insert)
+                    if parsed.tzinfo is None:
+                        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+                    created_on_insert = parsed
+                except Exception:
+                    created_on_insert = utc_now
+
+            if created_on_insert is None:
+                created_on_insert = utc_now
+
+            # Build the document that will be $set (exclude immutable _id and created_at)
+            doc_to_set = {k: v for k, v in record.items() if k not in ("_id",)}
 
             # Use $setOnInsert for created_at to preserve original create time on upserts
             bulk_operations.append(
                 UpdateOne(
                     {"_id": job_id},
-                    {"$set": doc_to_set, "$setOnInsert": {"created_at": utc_now}},
+                    {"$set": doc_to_set, "$setOnInsert": {"created_at": created_on_insert}},
                     upsert=True
                 )
             )
